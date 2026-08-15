@@ -1,0 +1,136 @@
+import json
+import os
+import re
+from typing import Dict, List, Literal
+from urllib.parse import urlparse
+from pydantic import BaseModel, Field
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
+from langgraph.graph import END, StateGraph
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+# ==========================================
+# ENVIRONMENT SETUP
+# ==========================================
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+
+class SearchQueries(BaseModel):
+    queries: List[str] = Field(description="List of search queries.")
+
+class AgentState(BaseModel):
+    question: str
+    queries: List[str] = []
+    search_results: List[Dict] = []
+    iterations: int = 0
+    final_answer: str = ""
+    references: Dict[int, Dict] = {}
+
+# Initialize Models
+fast = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", temperature=0.1, api_key=GROQ_API_KEY)
+reasoning = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", temperature=0.2, api_key=GROQ_API_KEY)
+search_tool = TavilySearchResults(max_results=5, tavily_api_key=TAVILY_API_KEY)
+
+def get_source_name(url: str) -> str:
+    try:
+        netloc = urlparse(url).netloc.replace("www.", "")
+        parts = netloc.split(".")
+        if len(parts) > 1:
+            name = parts[-2]
+            if name.lower() in ['co', 'com', 'org', 'net', 'gov', 'edu'] and len(parts) > 2:
+                name = parts[-3]
+            return name.capitalize()
+        return netloc.capitalize()
+    except:
+        return "Source"
+
+# ==========================================
+# GRAPH LOGIC
+# ==========================================
+def plan_research_node(state: AgentState) -> Dict:
+    return {"queries": [state.question, state.question + " market statistics"], "iterations": 1}
+
+def execute_search_node(state: AgentState) -> Dict:
+    results = search_tool.invoke({"query": state.queries[0]})
+    return {"search_results": results}
+
+def finalize_answer_node(state: AgentState) -> Dict:
+    formatted_context = []
+    references = {}
+    for idx, res in enumerate(state.search_results[:15], start=1):
+        references[idx] = {"title": res.get("title", f"Source {idx}"), "url": res.get("url", "")}
+        content = res.get("content", "")[:1200]
+        formatted_context.append(f"SOURCE [{idx}]\nTitle: {res.get('title', '')}\nContent: {content}\n")
+    
+    context_str = "\n---\n".join(formatted_context)
+    # Escaped curly braces for valid prompt templating
+    system_instruction = (
+        "You are an academic researcher. Write exhaustive deep-dives. Use [1], [2]. "
+        "No markdown in tags. Use <chart>{{ \"title\": \"...\", \"type\": \"bar\", \"labels\": [\"A\"], \"values\": [10] }}</chart>."
+    )
+    
+    sections = [
+        "Part 1: Abstract. Write 1000 words.", 
+        "Part 2: Deep-Dive. Insert <chart>{{ \"title\": \"Sample\", \"type\": \"bar\", \"labels\": [\"A\"], \"values\": [10] }}</chart>.", 
+        "Part 3: Fact Check Table."
+    ]
+    
+    full_report = ""
+    for section in sections:
+        prompt = ChatPromptTemplate.from_messages([("system", system_instruction), ("human", section)])
+        response = (prompt | reasoning).invoke({"context": context_str, "question": state.question})
+        full_report += response.content + "\n\n"
+    return {"final_answer": full_report, "references": references}
+
+# Build and Compile Graph
+workflow = StateGraph(AgentState)
+workflow.add_node("planner", plan_research_node)
+workflow.add_node("search", execute_search_node)
+workflow.add_node("finalizer", finalize_answer_node)
+workflow.set_entry_point("planner")
+workflow.add_edge("planner", "search")
+workflow.add_edge("search", "finalizer")
+workflow.add_edge("finalizer", END)
+app = workflow.compile()
+
+# ==========================================
+# UI RENDERING
+# ==========================================
+def render_inline_chart(chart_json_str):
+    try:
+        chart = json.loads(chart_json_str.strip())
+        df = pd.DataFrame({"Category": chart.get("labels", []), "Value": [float(v) for v in chart.get("values", [])]})
+        st.plotly_chart(px.bar(df, x="Category", y="Value", title=chart.get("title")), use_container_width=True)
+    except Exception as e:
+        st.error(f"Chart error: {e}")
+
+def main_streamlit():
+    st.set_page_config(layout="wide")
+    st.markdown("""<style>.citation-badge { background:#212121; color:#e3e3e3; padding:2px 10px; border-radius:16px; font-size:12px; text-decoration:none; margin:0 4px; border:1px solid #444; } .citation-badge img { width:14px; height:14px; border-radius:50%; margin-right:4px; }</style>""", unsafe_allow_html=True)
+    
+    question = st.text_input("Enter research topic:")
+    if st.button("Execute") and question:
+        final_state = app.invoke({"question": question})
+        output_text = final_state.get("final_answer", "")
+        
+        # Safe Citation Rendering
+        for key, ref in final_state["references"].items():
+            url = ref.get("url", "")
+            domain = get_source_name(url)
+            favicon = f"https://www.google.com/s2/favicons?domain={url}&sz=32"
+            badge = f'<a href="{url}" class="citation-badge" target="_blank"><img src="{favicon}"/>{domain}</a>'
+            output_text = output_text.replace(f"[{key}]", badge)
+            
+        parts = re.split(r'(?i)<chart>\s*(.*?)\s*</chart>', output_text, flags=re.DOTALL)
+        for part in parts:
+            if part.startswith("{"):
+                render_inline_chart(part)
+            else:
+                st.markdown(part, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main_streamlit()
