@@ -1,0 +1,40 @@
+<div class="listing-layout">
+  <aside class="filter-panel">
+    <h3>Categories</h3>
+    <ul>
+      <li><%= link_to "All products", products_path(query: params[:query]), class: @selected_category ? "" : "active" %></li>
+      <% @categories.each do |category| %>
+        <li>
+          <%= link_to category.name, products_path(category_id: category.id, query: params[:query]),
+                      class: (@selected_category == category ? "active" : "") %>
+        </li>
+      <% end %>
+    </ul>
+  </aside>
+
+  <div>
+    <h2 class="section-title">
+      <% if params[:query].present? %>
+        Results for "<%= params[:query] %>"
+      <% elsif @selected_category %>
+        <%= @selected_category.name %>
+      <% else %>
+        All products
+      <% end %>
+      (<%= @products.size %>)
+    </h2>
+
+    <% if @products.any? %>
+      <div class="product-grid">
+        <% @products.each do |product| %>
+          <%= render "shared/product_card", product: product %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <div class="big-emoji">&#128269;</div>
+        <p>No products found. Try a different search or category.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

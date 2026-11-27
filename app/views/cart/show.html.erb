@@ -1,0 +1,42 @@
+<h2 class="section-title">My Cart</h2>
+
+<% if @cart_items.any? %>
+  <div class="cart-layout">
+    <div>
+      <% @cart_items.each do |item| %>
+        <div class="cart-item-row">
+          <img src="<%= item.product.image_url %>" alt="<%= item.product.name %>">
+          <div>
+            <p class="pname"><%= link_to item.product.name, product_path(item.product) %></p>
+            <span class="price-now">&#8377;<%= number_with_delimiter(item.product.price.to_i) %></span>
+          </div>
+
+          <%= form_with url: update_cart_item_path(item), method: :patch, local: true, class: "qty-form" do %>
+            <%= button_to "&#8722;".html_safe, update_cart_item_path(item), params: { quantity: item.quantity - 1 }, method: :patch, form: { style: "display:inline" } %>
+            <input type="text" value="<%= item.quantity %>" readonly>
+            <%= button_to "&#43;".html_safe, update_cart_item_path(item), params: { quantity: item.quantity + 1 }, method: :patch, form: { style: "display:inline" } %>
+          <% end %>
+
+          <div>
+            <p><strong>&#8377;<%= number_with_delimiter(item.subtotal.to_i) %></strong></p>
+            <%= button_to "Remove", remove_cart_item_path(item), method: :delete, class: "remove-link", form: { style: "background:none;border:none;padding:0" } %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="summary-card">
+      <h3>Price details</h3>
+      <div class="summary-row"><span>Items (<%= current_cart.total_items %>)</span><span>&#8377;<%= number_with_delimiter(current_cart.total_price.to_i) %></span></div>
+      <div class="summary-row"><span>Delivery</span><span style="color:var(--gk-green)">Free</span></div>
+      <div class="summary-row summary-total"><span>Total</span><span>&#8377;<%= number_with_delimiter(current_cart.total_price.to_i) %></span></div>
+      <%= link_to "Proceed to checkout", checkout_path, class: "btn btn-primary btn-block" %>
+    </div>
+  </div>
+<% else %>
+  <div class="empty-state">
+    <div class="big-emoji">&#128722;</div>
+    <p>Your cart is empty.</p>
+    <%= link_to "Shop now", products_path, class: "btn btn-secondary" %>
+  </div>
+<% end %>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Growkit<%= content_for?(:title) ? " - #{yield(:title)}" : "" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="turbo-cache-control" content="no-cache">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application", media: "all" %>
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="navbar-inner">
+        <%= link_to root_path, class: "brand" do %>
+          <span class="brand-name">Growkit</span>
+          <span class="brand-tag">Explore Plus</span>
+        <% end %>
+
+        <%= form_with url: products_path, method: :get, local: true, class: "search-form" do %>
+          <input type="text" name="query" value="<%= params[:query] %>" placeholder="Search for products, brands and more" autocomplete="off" />
+          <button type="submit" aria-label="Search">&#128269;</button>
+        <% end %>
+
+        <nav class="nav-links">
+          <% if logged_in? %>
+            <span class="nav-user">&#128100; <%= current_user.name %></span>
+            <%= link_to "Orders", orders_path, class: "nav-user" %>
+            <%= button_to "Logout", logout_path, method: :delete, class: "link-btn", form: { style: "display:inline" } %>
+          <% else %>
+            <%= link_to "Login", login_path, class: "link-btn" %>
+          <% end %>
+          <%= link_to cart_path, class: "cart-link" do %>
+            &#128722; Cart
+            <% if logged_in? && current_cart && current_cart.total_items.to_i > 0 %>
+              <span class="cart-badge"><%= current_cart.total_items %></span>
+            <% end %>
+          <% end %>
+        </nav>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <% if notice %><div class="flash notice"><%= notice %></div><% end %>
+      <% if alert %><div class="flash alert"><%= alert %></div><% end %>
+
+      <%= yield %>
+    </div>
+
+    <footer class="footer">
+      <p>&copy; <%= Date.current.year %> Growkit &middot; Built with Ruby on Rails</p>
+    </footer>
+  </body>
+</html>

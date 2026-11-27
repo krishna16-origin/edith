@@ -1,0 +1,8 @@
+<div class="confirmation-box">
+  <div class="tick">&#10003;</div>
+  <h2>Order placed successfully!</h2>
+  <p>Order #<%= @order.id %> &middot; &#8377;<%= number_with_delimiter(@order.total_amount.to_i) %> &middot; <span class="status-pill <%= @order.status %>"><%= @order.status %></span></p>
+  <p>Delivering to: <%= @order.address %></p>
+  <%= link_to "Continue shopping", products_path, class: "btn btn-secondary" %>
+  <%= link_to "View my orders", orders_path, class: "btn btn-primary" %>
+</div>

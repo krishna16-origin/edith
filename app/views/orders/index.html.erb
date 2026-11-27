@@ -1,0 +1,19 @@
+<h2 class="section-title">My Orders</h2>
+
+<% if @orders.any? %>
+  <% @orders.each do |order| %>
+    <div class="order-card">
+      <div>
+        <p><strong>Order #<%= order.id %></strong> &middot; <%= order.created_at.strftime("%d %b %Y") %></p>
+        <p><%= order.order_items.count %> item(s) &middot; &#8377;<%= number_with_delimiter(order.total_amount.to_i) %></p>
+      </div>
+      <span class="status-pill <%= order.status %>"><%= order.status %></span>
+    </div>
+  <% end %>
+<% else %>
+  <div class="empty-state">
+    <div class="big-emoji">&#128230;</div>
+    <p>You haven't placed any orders yet.</p>
+    <%= link_to "Start shopping", products_path, class: "btn btn-secondary" %>
+  </div>
+<% end %>

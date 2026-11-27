@@ -1,0 +1,25 @@
+<section class="banner">
+  <div>
+    <h1>Hello<%= logged_in? ? ", #{current_user.name}" : "" %> &mdash; find today's best deals</h1>
+    <p>Mobiles, electronics, fashion and more. Fast delivery, easy returns.</p>
+  </div>
+  <span class="banner-badge">Up to 60% OFF</span>
+</section>
+
+<div class="category-row">
+  <%= link_to products_path, class: "category-chip #{'active' unless params[:category_id]}" do %>
+    <span class="emoji">&#10024;</span> All
+  <% end %>
+  <% @categories.each do |category| %>
+    <%= link_to products_path(category_id: category.id), class: "category-chip" do %>
+      <span class="emoji"><%= category.icon %></span> <%= category.name %>
+    <% end %>
+  <% end %>
+</div>
+
+<h2 class="section-title">Trending products</h2>
+<div class="product-grid">
+  <% @products.each do |product| %>
+    <%= render "shared/product_card", product: product %>
+  <% end %>
+</div>

@@ -1,97 +1,67 @@
-# BookVerse — Book Store Marketplace
+# Growkit 🛒
 
-A full-stack book marketplace with a **landing page**, separate **seller** and **buyer** portals, JWT auth, catalog management, cart/checkout (Cash on Delivery), and post-delivery ratings.
+A Flipkart-style online shopping app built with **Ruby on Rails**, SQLite and plain CSS (no JS framework required). Users log in with just their **name and mobile number** — no password.
 
-## Stack
+## Features
 
-- **Backend:** Python Flask, SQLite, SQLAlchemy, JWT
-- **Frontends:** React + TypeScript + Vite
-  - Landing: `http://localhost:5172`
-  - Seller portal: `http://localhost:5173`
-  - Buyer portal: `http://localhost:5174`
+- Passwordless login (name + 10-digit mobile number)
+- Home page with banner, category chips and trending products
+- Product listing with category filter and search
+- Product detail page with ratings, discount %, related products
+- Cart (add / update quantity / remove)
+- Checkout → Order placement → Order confirmation
+- Order history per user
+- Responsive, Flipkart-inspired blue/orange UI
 
-## Local Quick Start
+## Tech stack
 
-No Docker or PostgreSQL is required. The cleaned project uses SQLite and creates the database in `instance/bookstore.db`.
+- Ruby on Rails 7.1 (MVC)
+- SQLite3 database
+- Server-rendered ERB views + plain CSS (`app/assets/stylesheets/application.css`)
+- Session-based auth (`ApplicationController#current_user`)
 
-### 1. Backend
+## Project structure
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-flask --app run:app db upgrade
-python scripts/seed_couriers.py
-python scripts/seed_demo_users.py
-python run.py
+```
+app/
+  controllers/   sessions, home, products, cart, orders
+  models/        user, category, product, cart, cart_item, order, order_item
+  views/         layouts, home, products, sessions, cart, orders, shared
+  assets/        application.css (design tokens + components)
+config/
+  routes.rb, database.yml, application.rb, environments/*
+db/
+  migrate/*, schema.rb, seeds.rb
 ```
 
-API: `http://127.0.0.1:5000`
+## Data model
 
-### Demo login accounts
+| Model      | Key fields                                              |
+|------------|----------------------------------------------------------|
+| User       | phone_number (unique), name                               |
+| Category   | name, icon                                                |
+| Product    | name, description, price, mrp, image_url, stock, rating, category_id |
+| Cart       | user_id (one per user)                                    |
+| CartItem   | cart_id, product_id, quantity                              |
+| Order      | user_id, total_amount, status (placed/shipped/delivered/cancelled), address |
+| OrderItem  | order_id, product_id, quantity, price                      |
 
-These temporary accounts are included for local testing:
+## Running it locally
 
-| Role | Email | Password |
-|------|-------|----------|
-| Buyer | `demo.buyer@example.com` | `Demo@12345` |
-| Seller | `demo.seller@example.com` | `Demo@12345` |
-
-Run `python scripts/seed_demo_users.py` again to recreate or reset these demo accounts.
-
-### Rental handover and return details
-
-- New registrations can optionally save a **phone number** and **handover address**.
-- Both renter and owner receive notifications showing the book name, participant name, due time, rent, fine, and total amount due.
-- Reminders are generated at **1 day** and **1 hour** before the due time.
-- After a full overdue day, both users receive a follow-up explaining that the owner may contact the renter to arrange collection; the owner sees the renter’s saved phone and address.
-- The return flow shows the due time, return time, participant details, fine, expected amount, amount paid/collected, payment method, and notes.
-
-### 2. Frontends
-
-Open the **landing page** first — it links to both portals:
+This container has no internet access to RubyGems, so the Gemfile hasn't been bundled here. On your own machine, with Ruby 3.2+ and Bundler installed:
 
 ```bash
-# Landing (start here; run each app in its own terminal)
-cd frontend/landing && npm install && npm run dev
-
-# Seller portal
-cd /path/to/book-store-master/frontend/seller-portal && npm install && npm run dev
-
-# Buyer portal
-cd /path/to/book-store-master/frontend/buyer-portal && npm install && npm run dev
+cd growkit
+bundle install
+bin/rails db:prepare    # creates db + runs migrations
+bin/rails db:seed       # loads sample categories & products
+bin/rails server         # visit http://localhost:3000
 ```
 
-| App | URL | Purpose |
-|-----|-----|---------|
-| Landing | http://localhost:5172 | Choose seller or buyer portal |
-| Seller | http://localhost:5173 | Manage books & orders |
-| Buyer | http://localhost:5174 | Shop, cart, COD checkout, ratings |
+Log in with any name and any 10-digit number, e.g. `Priya Sharma` / `9876543210` — it will create your account on first login.
 
-## User Flow
+## Notes / next steps
 
-1. Visit **landing** → click Seller or Buyer portal card
-2. **Seller:** Register → add books → fulfill orders (confirm → ship → deliver)
-3. **Buyer:** Register → browse → cart → COD checkout → rate seller & courier when delivered
-
-## Design
-
-Shared design system in `frontend/shared/styles/theme.css`:
-
-- **Fraunces** display + **DM Sans** body typography
-- Seller theme: teal accents
-- Buyer theme: purple accents
-- Sidebar navigation, split auth layouts, polished tables and cards
-
-## API Overview
-
-| Prefix | Role |
-|--------|------|
-| `/api/v1/auth` | Register, login, tokens |
-| `/api/v1/seller` | Books, orders, couriers |
-| `/api/v1/buyer` | Catalog, cart, checkout, ratings |
-
-## Environment
-
-See `.env.example` for SQLite, `CORS_ORIGINS`, and portal URLs. Do not commit or copy `node_modules` or `dist` directories.
+- Product images use placeholder.co URLs — swap in real images or Active Storage uploads.
+- Payments aren't integrated; "Place order" just records the order.
+- Add admin screens if you want to manage products/categories through the UI instead of `db/seeds.rb`.
