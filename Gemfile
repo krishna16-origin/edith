@@ -9,10 +9,7 @@ gem "importmap-rails"
 gem "turbo-rails"
 gem "stimulus-rails"
 gem "bootsnap", require: false
-
-group :development, :test do
-  gem "sqlite3", "~> 1.7"
-end
+gem "sqlite3", "~> 1.7"
 
 group :production do
   gem "pg", "~> 1.5"

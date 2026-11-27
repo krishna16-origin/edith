@@ -13,8 +13,8 @@ test:
   timeout: 5000
   database: storage/test.sqlite3
 
-# Render (and most PaaS providers) inject a full DATABASE_URL for the
-# Postgres instance you attach, so no adapter/host/user details are needed here.
 production:
   <<: *default
-  url: <%= ENV["DATABASE_URL"] %>
+  adapter: sqlite3
+  timeout: 5000
+  database: storage/production.sqlite3
