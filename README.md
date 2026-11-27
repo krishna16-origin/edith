@@ -60,6 +60,26 @@ bin/rails server         # visit http://localhost:3000
 
 Log in with any name and any 10-digit number, e.g. `Priya Sharma` / `9876543210` — it will create your account on first login.
 
+## Deploying to the cloud (Render)
+
+The repo is already set up for [Render](https://render.com) — Postgres in production, SQLite stays for local dev.
+
+**One-time local step first** (needed before any deploy, Rails needs this to encrypt sessions/secrets):
+```bash
+bundle install
+EDITOR="nano" bin/rails credentials:edit
+```
+This creates `config/master.key` (gitignored — never commit it) and `config/credentials.yml.enc` (safe to commit). Commit and push the `.enc` file.
+
+**Then deploy:**
+1. Push the repo to GitHub (already done for `edith`).
+2. In the Render dashboard → **New** → **Blueprint** → connect the repo. Render reads `render.yaml` and creates the web service + a free Postgres database automatically.
+3. When prompted for `RAILS_MASTER_KEY`, paste the contents of your local `config/master.key` file.
+4. Click **Apply** — Render runs `bin/render-build.sh` (installs gems, precompiles assets, runs migrations, seeds data on first deploy) and starts the app.
+5. Your app is live at `https://growkit-<random>.onrender.com`.
+
+Alternative: **Fly.io** works too and can keep SQLite (via a persistent volume) instead of switching to Postgres — good if you want to stay on a single instance and skip the database swap. Ask me and I can prep a `fly.toml` + Dockerfile instead.
+
 ## Notes / next steps
 
 - Product images use placeholder.co URLs — swap in real images or Active Storage uploads.

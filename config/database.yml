@@ -1,16 +1,20 @@
 default: &default
-  adapter: sqlite3
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  timeout: 5000
 
 development:
   <<: *default
+  adapter: sqlite3
+  timeout: 5000
   database: storage/development.sqlite3
 
 test:
   <<: *default
+  adapter: sqlite3
+  timeout: 5000
   database: storage/test.sqlite3
 
+# Render (and most PaaS providers) inject a full DATABASE_URL for the
+# Postgres instance you attach, so no adapter/host/user details are needed here.
 production:
   <<: *default
-  database: storage/production.sqlite3
+  url: <%= ENV["DATABASE_URL"] %>
